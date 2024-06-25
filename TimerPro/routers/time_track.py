@@ -1,6 +1,6 @@
 from fastapi import APIRouter
-from TimerPro.TimeTrack.schema import ConfigTimerSchema, UpdateConfigTimerSchema
-from TimerPro.TimeTrack.services import ConfigTimer
+from TimerPro.TimeTrack.schema import ConfigTimerSchema, UpdateConfigTimerSchema, GetTimerSchema
+from TimerPro.TimeTrack.services import ConfigTimer, GetTimer
 
 router = APIRouter(tags=["Configure Timer"])
 
@@ -42,3 +42,17 @@ async def update_config_timer(data: UpdateConfigTimerSchema):
             dict: The result of the operation.
     """
     return await ConfigTimer.update_time_configuration(data)
+
+
+@router.post('/get-timer', status_code=200)
+async def get_time(data: GetTimerSchema):
+    """
+        Retrieve timer information based on the provided data.
+
+        Args:
+            data (GetTimerSchema): The schema containing the necessary data to query the timer.
+
+        Returns:
+            JSON response containing the timer information.
+    """
+    return await GetTimer.get_timer(data)

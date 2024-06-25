@@ -2,8 +2,10 @@ import os
 
 import uvicorn
 from fastapi import FastAPI
+from starlette.middleware.cors import CORSMiddleware
+
 from TimerPro.routers import time_track
-from sockets import socket_app
+
 
 app = FastAPI()
 
@@ -11,8 +13,17 @@ app = FastAPI()
 origins = [
     "*",
 ]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
 app.include_router(time_track.router)
-app.mount("/", socket_app)
 
 
 @app.get("/")

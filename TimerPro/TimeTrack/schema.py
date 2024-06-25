@@ -39,3 +39,20 @@ class UpdateConfigTimerSchema(BaseModel):
     notify: bool
     alert_time: Optional[time] = None
     message: Optional[str] = None
+
+
+class GetTimerSchema(BaseModel):
+    """
+        Schema for the timer data required to retrieve timer information.
+
+        Attributes:
+            id (str): The unique identifier for the timer.
+            name (str): The name of the timer.
+            config_data_uuid (str): The unique identifier for the configuration data associated with the timer.
+            duration (time): The duration of the timer.
+    """
+    id: str
+    name: str
+    config_data_uuid: str
+    duration: time
+

@@ -3,22 +3,18 @@ import uuid
 
 from starlette.responses import JSONResponse
 
-from TimerPro.TimeTrack.schema import ConfigTimerSchema, UpdateConfigTimerSchema
+from TimerPro.TimeTrack.schema import ConfigTimerSchema, UpdateConfigTimerSchema, GetTimerSchema
 from TimerPro.TimeTrack.utils import GetOrSetRedisData, TimeFormatConversion
 from redis_connection import RedisConnection
 from response import APIResponse
+
+redis_connection = RedisConnection().redis_client
 
 
 class ConfigTimer:
     """
         ConfigTimer handles the setting, getting, and updating of timer configurations in a Redis database.
     """
-
-    def __init__(self):
-        """
-            Initializes a new instance of ConfigTimer with a connection to the Redis database.
-        """
-        self.redis_connection = RedisConnection().redis_client
 
     @staticmethod
     async def set_time_configuration(data: ConfigTimerSchema):
@@ -43,11 +39,8 @@ class ConfigTimer:
             new_data['alert_time'] = await TimeFormatConversion().convert_and_format_time(data.alert_time)
             new_data['id'] = str(uuid.uuid4())
 
-            conn = ConfigTimer().redis_connection
-            conn.select(1)
-
-            await GetOrSetRedisData().set(conn, new_data.get('id'), new_data)
-            return APIResponse.success_response(await GetOrSetRedisData().get(conn, new_data.get('id')),
+            await GetOrSetRedisData().set(redis_connection, new_data.get('id'), new_data)
+            return APIResponse.success_response(await GetOrSetRedisData().get(redis_connection, new_data.get('id')),
                                                 "Successfully set time configuration.", 200)
         except Exception as e:
             return APIResponse.error_response(str(e), 400)
@@ -60,10 +53,8 @@ class ConfigTimer:
             Returns:
                JSONResponse: The response containing all timer configurations.
         """
-        conn = ConfigTimer().redis_connection
-        conn.select(1)
-        keys = conn.keys('*')
-        values = conn.mget(keys)
+        keys = redis_connection.keys('*')
+        values = redis_connection.mget(keys)
         values = [json.loads(value) for value in values]
         return JSONResponse(
             content={"message": "Successfully retrieve time configuration.", 'data': values, 'code': 200},
@@ -87,9 +78,7 @@ class ConfigTimer:
                 if not data.alert_time:
                     return APIResponse.error_response("Alert time field is required.", 400)
 
-            conn = ConfigTimer().redis_connection
-            conn.select(1)
-            existing_data = await GetOrSetRedisData().get(conn, data.dict().get('id'))
+            existing_data = await GetOrSetRedisData().get(redis_connection, data.dict().get('id'))
 
             if existing_data is None:
                 return APIResponse.error_response("No data found", 400)
@@ -98,8 +87,41 @@ class ConfigTimer:
             new_data['duration'] = await TimeFormatConversion().convert_and_format_time(data.duration)
             new_data['alert_time'] = await TimeFormatConversion().convert_and_format_time(data.alert_time)
 
-            await GetOrSetRedisData().set(conn, new_data.get('id'), new_data)
+            await GetOrSetRedisData().set(redis_connection, new_data.get('id'), new_data)
             return APIResponse.success_response(existing_data,
                                                 "Successfully update time configuration.", 200)
         except Exception as e:
             return APIResponse.error_response(str(e), 400)
+
+
+class GetTimer:
+    """
+        A class to handle the retrieval of timer information.
+    """
+
+    @staticmethod
+    async def get_timer(data: GetTimerSchema):
+        """
+            Retrieve and process timer information based on the provided schema.
+
+            This method converts the duration to a specific format, retrieves configuration data from a Redis store if
+            available, and constructs the response accordingly.
+
+            Args:
+               data (GetTimerSchema): The schema containing the necessary data to query the timer.
+
+            Returns:
+               dict: A dictionary containing the timer information, including any additional configuration data
+                     retrieved from Redis.
+        """
+        data = data.dict()
+        data['duration'] = await TimeFormatConversion().convert_and_format_time(data.get('duration'))
+        config_data_uuid = data.get('config_data_uuid')
+        if config_data_uuid:
+            config_data = await GetOrSetRedisData().get(redis_connection, config_data_uuid)
+            if config_data is not None and config_data.get('notify'):
+                data['message'] = config_data.get('message')
+                data['alert_time'] = config_data.get('alert_time')
+                data['notify'] = config_data.get('notify')
+        return APIResponse.success_response(data,
+                                            "Successfully get configuration data for user.", 200)
