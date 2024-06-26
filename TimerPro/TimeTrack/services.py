@@ -4,7 +4,7 @@ import uuid
 from starlette.responses import JSONResponse
 
 from TimerPro.TimeTrack.schema import ConfigTimerSchema, UpdateConfigTimerSchema, GetTimerSchema
-from TimerPro.TimeTrack.utils import GetOrSetRedisData, TimeFormatConversion
+from TimerPro.TimeTrack.utils import GetOrSetRedisData, TimeFormatConversion, RedisDataValidator
 from redis_connection import RedisConnection
 from response import APIResponse
 
@@ -34,7 +34,12 @@ class ConfigTimer:
                 if not data.alert_time:
                     return APIResponse.error_response("Alert time field is required.", 400)
 
-            new_data = data.dict()
+            is_name_exists = await RedisDataValidator().validate_data(redis_connection, 'name', data.name)
+
+            if is_name_exists:
+                return APIResponse.error_response("Name already exists.", 400)
+
+            new_data = data.model_dump()
             new_data['duration'] = await TimeFormatConversion().convert_and_format_time(data.duration)
             new_data['alert_time'] = await TimeFormatConversion().convert_and_format_time(data.alert_time)
             new_data['id'] = str(uuid.uuid4())
@@ -78,12 +83,16 @@ class ConfigTimer:
                 if not data.alert_time:
                     return APIResponse.error_response("Alert time field is required.", 400)
 
-            existing_data = await GetOrSetRedisData().get(redis_connection, data.dict().get('id'))
-
+            existing_data = await GetOrSetRedisData().get(redis_connection, data.model_dump().get('id'))
             if existing_data is None:
                 return APIResponse.error_response("No data found", 400)
 
-            new_data = data.dict()
+            is_name_exists = await RedisDataValidator().validate_data(redis_connection, 'name', data.name, data.model_dump().get('id'))
+
+            if is_name_exists:
+                return APIResponse.error_response("Name already exists.", 400)
+
+            new_data = data.model_dump()
             new_data['duration'] = await TimeFormatConversion().convert_and_format_time(data.duration)
             new_data['alert_time'] = await TimeFormatConversion().convert_and_format_time(data.alert_time)
 
@@ -114,7 +123,7 @@ class GetTimer:
                dict: A dictionary containing the timer information, including any additional configuration data
                      retrieved from Redis.
         """
-        data = data.dict()
+        data = data.model_dump()
         data['duration'] = await TimeFormatConversion().convert_and_format_time(data.get('duration'))
         config_data_uuid = data.get('config_data_uuid')
         if config_data_uuid:

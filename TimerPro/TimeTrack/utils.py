@@ -72,3 +72,51 @@ class TimeFormatConversion:
             converted_time = await TimeFormatConversion().convert_time(time_value)
             return converted_time.isoformat() if converted_time else None
         return None
+
+
+class RedisDataValidator:
+    """
+        Utility class for validating data in a Redis database.
+
+        Methods:
+            validate_data(connection, key, validate_value, exclude_redis_key=None):
+                Validates if a specified value exists in the Redis database under a given key,
+                optionally excluding a specific Redis key.
+
+            Args:
+            connection (redis.Redis): The Redis connection object.
+            key (str): The key to look for within each Redis value.
+            validate_value (str): The value to validate existence within Redis.
+            exclude_redis_key (str, optional): The Redis key to exclude from validation.
+
+            Returns:
+                bool: True if the validate_value exists in any Redis value under the specified key,
+                      False otherwise.
+    """
+
+    @staticmethod
+    async def validate_data(connection, key, validate_value, exclude_redis_key=None):
+        """
+            Validate if a value exists in the Redis database under a given key.
+
+            Args:
+                connection (redis.Redis): The Redis connection object.
+                key (str): The key to look for within each Redis value.
+                validate_value (str): The value to validate existence within Redis.
+                exclude_redis_key (str, optional): The Redis key to exclude from validation.
+
+            Returns:
+                bool: True if the validate_value exists in any Redis value under the specified key,
+                      False otherwise.
+        """
+        redis_keys = connection.keys('*')
+
+        # Exclude the specified key
+        if exclude_redis_key:
+            keys = [redis_key for redis_key in redis_keys if redis_key != exclude_redis_key.encode()]
+
+        redis_values = connection.mget(redis_keys)
+        values = [json.loads(redis_value).get(key) for redis_value in redis_values]
+
+        if validate_value in values:
+            return True
