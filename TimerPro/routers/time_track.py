@@ -5,7 +5,7 @@ from TimerPro.TimeTrack.services import ConfigTimer, GetTimer
 router = APIRouter(tags=["Configure Timer"])
 
 
-@router.post('/set_config-timer', status_code=200)
+@router.post('/set-config-timer', status_code=200)
 async def add_config_timer(data: ConfigTimerSchema):
     """
         Add a new timer configuration.

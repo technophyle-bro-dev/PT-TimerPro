@@ -5,10 +5,10 @@ from starlette.responses import JSONResponse
 
 from TimerPro.TimeTrack.schema import ConfigTimerSchema, UpdateConfigTimerSchema, GetTimerSchema
 from TimerPro.TimeTrack.utils import GetOrSetRedisData, TimeFormatConversion, RedisDataValidator
-from redis_connection import RedisConnection
 from response import APIResponse
+from TimerPro import redis_connection
 
-redis_connection = RedisConnection().redis_client
+redis_connection = redis_connection
 
 
 class ConfigTimer:

@@ -26,10 +26,5 @@ app.add_middleware(
 app.include_router(time_track.router)
 
 
-@app.get("/")
-def read_root():
-    return {"Hello": "World"}
-
-
 if __name__ == "__main__":
     uvicorn.run("main:app", host=os.environ.get('FASTAPI_HOST'), port=int(os.environ.get('FASTAPI_PORT')), lifespan="on", reload=True)
